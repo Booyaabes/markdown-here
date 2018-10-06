@@ -55,6 +55,33 @@ function markdownRender(mdText, userprefs, marked, hljs) {
     }
   };
 
+  markedRenderer.code = function(code, lang, escaped) {
+    if (this.options.mermaidSupportEnabled && typeof this.options.mermaidRenderer === 'function') {
+      if (lang === 'mermaid') return this.options.mermaidRenderer(code, lang);
+    }
+    
+    if (this.options.highlight) {
+      var out = this.options.highlight(code, lang);
+      if (out != null && out !== code) {
+        escaped = true;
+        code = out;
+      }
+    }
+  
+    if (!lang) {umlRenderer
+      return '<pre><code>'
+        + (escaped ? code : escape(code, true))
+        + '</code></pre>';
+    }
+  
+    return '<pre><code class="'
+      + this.options.langPrefix
+      + escape(lang, true)
+      + '">'
+      + (escaped ? code : escape(code, true))
+      + '</code></pre>\n';
+  };
+
   var defaultLinkRenderer = markedRenderer.link;
   markedRenderer.link = function(href, title, text) {
     // Added to fix MDH issue #57: MD links should automatically add scheme.
@@ -72,6 +99,8 @@ function markdownRender(mdText, userprefs, marked, hljs) {
     return defaultLinkRenderer.call(this, href, title, text);
   };
 
+  var mermaidCount = 1;
+
   var markedOptions = {
     renderer: markedRenderer,
     gfm: true,
@@ -79,6 +108,7 @@ function markdownRender(mdText, userprefs, marked, hljs) {
     sanitize: false,
     tables: true,
     smartLists: true,
+    mermaidSupportEnabled: true,
     breaks: userprefs['gfm-line-breaks-enabled'],
     smartypants: true,
     // Bit of a hack: highlight.js uses a `hljs` class to style the code block,
@@ -92,6 +122,11 @@ function markdownRender(mdText, userprefs, marked, hljs) {
         }
 
         return codeText;
+      },
+      mermaidRenderer: function(str) {
+          let res = mermaid.render(`mermaid${mermaidCount}`, str);
+          mermaidCount += 1;
+          return `<div>${res}</div>`;
       }
     };
 
